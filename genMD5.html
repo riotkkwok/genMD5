@@ -2,13 +2,72 @@
 <html>
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>MD5 generater</title>
 </head>
 <body>
+    <div class="notice">Please use Chrome / FireFox / Safari for the best user experience.</div>
+    <div class="submit-box">
+        <input id="fileInput" type="file">
+    </div>
     <div id="result">
         <p>Result</p>
     </div>
   
     <script type="text/javascript">
+    var fileWorker = new Worker('fileWorker.js'),
+        unit = 65536, 
+        buffer = [];
+    
+    fileWorker.onmessage = function(e){
+        if(e.data.status == 0){
+            console.log('Rendering');
+            document.querySelector('#result').innerHTML = e.data.data;
+        }else if(e.data.status == 1){
+            buffer[e.data.index] = e.data.data;
+            if(e.data.count == e.data.total){
+                console.log('Done');
+                fileWorker.postMessage({
+                        'index' : 'DONE',
+                        'result': e.data.len,
+                        'buffer' : buffer
+                });                 
+            }
+        }
+    };
+        
+    
+    function md5Hash(file, callback){
+        var size = Math.ceil(file.size/unit), count = 0;
+        buffer = [];
+        console.log(file.size * 8 + ' bits');
+        
+        for(var i = 0; i < size; i++){
+            var reader = new FileReader();
+            reader._index = i;
+            reader.onload = function(e){
+                fileWorker.postMessage({
+                    'index' : this._index,
+                    'len' : file.size * 8,
+                    'current' : ++count,
+                    'total' : size,
+                    'result' : e.target.result
+                });
+            };
+            reader.readAsBinaryString(file.slice(i*unit,((i+1)*unit < file.size ? (i+1)*unit : file.size))); 
+        }
+    };
+    
+    window.onload = function(){
+        console.log('loaded');
+        if(window.File && window.FileList && window.FileReader){
+            document.querySelector('#fileInput').onchange = function(){
+                if(this.files.length > 0){
+                    var file = this.files[0];
+                    md5Hash(file);
+                }
+            };
+        }
+    };
     </script>
 </body>
 </html>
