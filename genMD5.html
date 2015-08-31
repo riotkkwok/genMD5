@@ -19,13 +19,15 @@
         buffer = [];
     
     fileWorker.onmessage = function(e){
+        document.querySelector('#result').innerHTML = '<p>'+ e.data.count +'/'+ e.data.total +' Parsed ... </p>';
         if(e.data.status == 0){
-            console.log('Rendering');
+            console.log('Done');
             document.querySelector('#result').innerHTML = e.data.data;
         }else if(e.data.status == 1){
             buffer[e.data.index] = e.data.data;
             if(e.data.count == e.data.total){
-                console.log('Done');
+                document.querySelector('#result').innerHTML = '<p> Loading ... </p>';
+                console.log('Rendering');
                 fileWorker.postMessage({
                         'index' : 'DONE',
                         'result': e.data.len,
@@ -63,6 +65,7 @@
             document.querySelector('#fileInput').onchange = function(){
                 if(this.files.length > 0){
                     var file = this.files[0];
+                    document.querySelector('#result').innerHTML = '<p>Started ... </p>';
                     md5Hash(file);
                 }
             };
