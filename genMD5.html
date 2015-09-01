@@ -3,20 +3,48 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>MD5 generater</title>
+    <style type="text/css">
+    .hidden{
+        display: none !important;
+    }
+    .submit-box{
+        box-shadow: 0 0 5px 0 #999999;
+        border-radius: 5px;
+        padding: 20px;
+        background-color: #e1e8e5;
+    }
+    .drag-box{
+        color: #ffff00;
+        font-size: 20px;
+        text-align: center;
+        line-height: 80px;
+        height: 80px;
+        width: 100%;
+        border: 2px dotted #aaaaaa;
+        border-radius: 5px;
+        background-color: #9dd6c5;
+    }
+    .drag-box:hover{
+        color: #ffffff;
+        background-color: #00c35a;
+    }
+    </style>
 </head>
 <body>
     <div class="notice">Please use Chrome / FireFox / Safari for the best user experience.</div>
     <div class="submit-box">
-        <input id="fileInput" type="file">
+        <div id="dragBox" class="drag-box">Please drag the file to this area.</div>
+        <input id="fileInput" type="file" class="hidden">
     </div>
     <div id="result">
         <p>Result</p>
     </div>
-  
+
     <script type="text/javascript">
     var fileWorker = new Worker('fileWorker.js'),
         unit = 65536, 
-        buffer = [];
+        buffer = [],
+		dragBox = document.getElementById('dragBox');
     
     fileWorker.onmessage = function(e){
         document.querySelector('#result').innerHTML = '<p>'+ e.data.count +'/'+ e.data.total +' Parsed ... </p>';
@@ -59,6 +87,11 @@
         }
     };
     
+    function drop(e){
+        var files = e.dataTransfer.files, file = files[0];
+        md5Hash(file);
+    }
+    
     window.onload = function(){
         console.log('loaded');
         if(window.File && window.FileList && window.FileReader){
@@ -69,6 +102,21 @@
                     md5Hash(file);
                 }
             };
+            dragBox.addEventListener('dragover', function(e){
+                e.preventDefault();
+                e.stopPropagation();
+            });
+            
+            dragBox.addEventListener('dragleave', function(e){
+                e.preventDefault();
+                e.stopPropagation();
+            });
+            
+            dragBox.addEventListener('drop', function(e){
+                e.preventDefault();
+                e.stopPropagation();
+                drop(e);
+            });
         }
     };
     </script>
