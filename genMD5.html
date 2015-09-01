@@ -7,6 +7,22 @@
     .hidden{
         display: none !important;
     }
+    .notice{
+        position: fixed;
+        top: 0;
+        left: 0;
+        color: #ffffff;
+        font-size: 16px;
+        font-weight: bold;
+        text-align: center;
+        line-height: 28px;
+        height: 28px;
+        width: 100%;
+        background-color: #ff0000;
+    }
+    .notice-ph{
+        height: 28px;
+    }
     .submit-box{
         box-shadow: 0 0 5px 0 #999999;
         border-radius: 5px;
@@ -26,14 +42,17 @@
     }
     .drag-box:hover{
         color: #ffffff;
+        box-shadow: inset 0 0 5px 0 #ffff00;
+        border: 2px dotted #aaaa00;
         background-color: #00c35a;
     }
     </style>
 </head>
 <body>
-    <div class="notice">Please use Chrome / FireFox / Safari for the best user experience.</div>
+    <div id="notice" class="notice" style="display: none;">Sorry that your browser is too old to run this programme, please use Chrome / FireFox / Safari for the best user experience.</div>
+    <div class="notice-ph" style="display: none;"></div>
     <div class="submit-box">
-        <div id="dragBox" class="drag-box">Please drag the file to this area.</div>
+        <div id="dragBox" class="drag-box">Please drop the file in this area.</div>
         <input id="fileInput" type="file" class="hidden">
     </div>
     <div id="result">
@@ -41,29 +60,40 @@
     </div>
 
     <script type="text/javascript">
-    var fileWorker = new Worker('fileWorker.js'),
+    var fileWorker,
         unit = 65536, 
         buffer = [],
 		dragBox = document.getElementById('dragBox');
+
+    if(!window.console){
+        window.console = {
+            log: function(){},
+            warn: function(){},
+            error: function(){},
+        };
+    }
     
-    fileWorker.onmessage = function(e){
-        document.querySelector('#result').innerHTML = '<p>'+ e.data.count +'/'+ e.data.total +' Parsed ... </p>';
-        if(e.data.status == 0){
-            console.log('Done');
-            document.querySelector('#result').innerHTML = e.data.data;
-        }else if(e.data.status == 1){
-            buffer[e.data.index] = e.data.data;
-            if(e.data.count == e.data.total){
-                document.querySelector('#result').innerHTML = '<p> Loading ... </p>';
-                console.log('Rendering');
-                fileWorker.postMessage({
-                        'index' : 'DONE',
-                        'result': e.data.len,
-                        'buffer' : buffer
-                });                 
+    function initWorker(){
+        fileWorker = new Worker('fileWorker.js');
+        fileWorker.onmessage = function(e){
+            document.querySelector('#result').innerHTML = '<p>'+ e.data.count +'/'+ e.data.total +' Parsed ... </p>';
+            if(e.data.status == 0){
+                console.log('Done');
+                document.querySelector('#result').innerHTML = '<p>'+e.data.data+'</p>';
+            }else if(e.data.status == 1){
+                buffer[e.data.index] = e.data.data;
+                if(e.data.count == e.data.total){
+                    document.querySelector('#result').innerHTML = '<p> Loading ... </p>';
+                    console.log('Rendering');
+                    fileWorker.postMessage({
+                            'index' : 'DONE',
+                            'result': e.data.len,
+                            'buffer' : buffer
+                    });                 
+                }
             }
-        }
-    };
+        };
+    }
         
     
     function md5Hash(file, callback){
@@ -94,29 +124,40 @@
     
     window.onload = function(){
         console.log('loaded');
-        if(window.File && window.FileList && window.FileReader){
-            document.querySelector('#fileInput').onchange = function(){
-                if(this.files.length > 0){
-                    var file = this.files[0];
-                    document.querySelector('#result').innerHTML = '<p>Started ... </p>';
-                    md5Hash(file);
-                }
-            };
-            dragBox.addEventListener('dragover', function(e){
-                e.preventDefault();
-                e.stopPropagation();
-            });
-            
-            dragBox.addEventListener('dragleave', function(e){
-                e.preventDefault();
-                e.stopPropagation();
-            });
-            
-            dragBox.addEventListener('drop', function(e){
-                e.preventDefault();
-                e.stopPropagation();
-                drop(e);
-            });
+        var ua = navigator.userAgent;
+        if(window.File && window.FileList && window.FileReader && window.Worker){
+            initWorker();
+            if(/(MSIE).*(Windows).*(Trident)?/i.test(ua) || /Mobile/i.test(ua)){
+                document.querySelector('#fileInput').classList.remove('hidden');
+                dragBox.classList.add('hidden');
+
+                document.querySelector('#fileInput').onchange = function(){
+                    if(this.files.length > 0){
+                        var file = this.files[0];
+                        document.querySelector('#result').innerHTML = '<p>Started ... </p>';
+                        md5Hash(file);
+                    }
+                };
+            }else{
+                dragBox.addEventListener('dragover', function(e){
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+                
+                dragBox.addEventListener('dragleave', function(e){
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+                
+                dragBox.addEventListener('drop', function(e){
+                    e.preventDefault();
+                    e.stopPropagation();
+                    drop(e);
+                });
+            }
+        }else{
+            document.querySelector('#notice').style.display = 'block';
+            document.querySelector('.notice-ph').style.display = 'block';
         }
     };
     </script>
